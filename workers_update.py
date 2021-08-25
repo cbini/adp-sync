@@ -9,6 +9,8 @@ from dotenv import load_dotenv
 from oauthlib.oauth2 import BackendApplicationClient
 from requests_oauthlib import OAuth2Session
 
+from datarobot.utilities import email
+
 load_dotenv()
 
 CERT_FILENAME = os.getenv("CERT_FILENAME")
@@ -49,8 +51,9 @@ def post_worker_change(session, path, payload):
                 f"{m.get('userMessage').get('messageTxt')}"
             )
         print(formatted_message)
-        # email_body = f"{formatted_message}\n\n{traceback.format_exc()}"
-        # email.send_email("ADP Worker Update Error", email_body)
+        email_subject = "ADP Worker Update Error"
+        email_body = f"{formatted_message}\n\n{traceback.format_exc()}"
+        email.send_email(subject=email_subject, body=email_body)
 
 
 def main():
@@ -188,5 +191,6 @@ if __name__ == "__main__":
     except Exception as xc:
         print(xc)
         print(traceback.format_exc())
-        # email_body = f"{traceback.format_exc()}"
-        # email.send_email("ADP Worker Update Error", email_body)
+        email_subject = "ADP Worker Update Error"
+        email_body = f"{xc}\n\n{traceback.format_exc()}"
+        email.send_email(subject=email_subject, body=email_body)
