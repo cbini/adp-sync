@@ -132,4 +132,6 @@ dmypy.json
 data/
 dev/
 archive/
+certs/
 .bash_secrets
+workers_update.sh
