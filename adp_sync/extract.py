@@ -45,6 +45,7 @@ def main():
                 "worker/associateOID",
                 "worker/person/preferredName",
                 "worker/person/legalName",
+                "worker/person/customFieldGroup",
                 "worker/businessCommunication/emails",
                 "worker/customFieldGroup",
                 "worker/workerDates",
@@ -53,7 +54,7 @@ def main():
         "$skip": 0,
     }
 
-    all_data = adp.get_paginated_data(adp_client, endpoint, querystring)
+    all_data = adp.get_paginated_records(adp_client, endpoint, querystring)
 
     # save to json.gz
     with gzip.open(data_file, "wt", encoding="utf-8") as f:

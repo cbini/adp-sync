@@ -52,7 +52,7 @@ def main():
             ),
             None,
         )
-        employee_number = next(
+        w_clean["employee_number"] = next(
             iter(
                 [
                     f
@@ -62,7 +62,26 @@ def main():
             ),
             None,
         )
-        w_clean["employee_number"] = employee_number
+        w_clean["wfm_trigger"] = next(
+            iter(
+                [
+                    f
+                    for f in w["customFieldGroup"].get("stringFields", {})
+                    if f["nameCode"]["codeValue"] == "WFMgr Trigger"
+                ]
+            ),
+            None,
+        )
+        w_clean["pref_race_eth"] = next(
+            iter(
+                [
+                    f
+                    for f in w["person"]["customFieldGroup"].get("multiCodeFields", {})
+                    if f["nameCode"]["codeValue"] == "Preferred Race/Ethnicity"
+                ]
+            ),
+            None,
+        )
         workers_export_clean.append(w_clean)
     print("\tSUCCESS!")
 
@@ -101,16 +120,17 @@ def main():
                     f"\t{record_match['work_email']} => {i['mail']}"
                 )
 
-                work_email_change_payload = base_payload.copy()
-                work_email_change_payload["events"][0]["data"]["transform"][
-                    "worker"
-                ] = {"businessCommunication": {"email": {"emailUri": i["mail"]}}}
+                work_email_payload = base_payload.copy()
+                work_email_payload["events"][0]["data"]["transform"]["worker"] = {
+                    "businessCommunication": {"email": {"emailUri": i["mail"]}}
+                }
 
                 adp.post(
                     session=adp_client,
-                    path="business-communication.email",
-                    payload=work_email_change_payload,
-                    action="change",
+                    endpoint=WORKER_ENDPOINT,
+                    subresource="business-communication.email",
+                    verb="change",
+                    payload=work_email_payload,
                 )
 
             # update employee number if missing
@@ -121,27 +141,53 @@ def main():
                     f" => {i['employee_number']}"
                 )
 
-                employee_number_change_payload = base_payload.copy()
-                employee_number_change_payload["events"][0]["data"]["eventContext"][
-                    "worker"
-                ]["customFieldGroup"] = {
+                en_payload = base_payload.copy()
+                en_payload["events"][0]["data"]["eventContext"]["worker"][
+                    "customFieldGroup"
+                ] = {
                     "stringField": {
                         "itemID": f"{record_match.get('employee_number').get('itemID')}"
                     }
                 }
-                employee_number_change_payload["events"][0]["data"]["transform"][
-                    "worker"
-                ]["customFieldGroup"] = {
-                    "stringField": {"stringValue": i["employee_number"]}
-                }
+                en_payload["events"][0]["data"]["transform"]["worker"][
+                    "customFieldGroup"
+                ] = {"stringField": {"stringValue": i["employee_number"]}}
 
                 adp.post(
                     session=adp_client,
-                    path="custom-field.string",
-                    payload=employee_number_change_payload,
-                    action="change",
+                    endpoint=WORKER_ENDPOINT,
+                    subresource="custom-field.string",
+                    verb="change",
+                    payload=en_payload,
                 )
 
+            # update wfn trigger if not null
+            if i["wfm_trigger"]:
+                print(
+                    f"{i['employee_number']}"
+                    f"\t{record_match.get('wfm_trigger').get('stringValue')}"
+                    f" => {i['wfm_trigger']}"
+                )
+
+                wfm_change_payload = base_payload.copy()
+                wfm_change_payload["events"][0]["data"]["eventContext"]["worker"][
+                    "customFieldGroup"
+                ] = {
+                    "stringField": {
+                        "itemID": f"{record_match.get('wfm_trigger').get('itemID')}"
+                    }
+                }
+                wfm_change_payload["events"][0]["data"]["transform"]["worker"][
+                    "customFieldGroup"
+                ] = {"stringField": {"stringValue": i["wfm_trigger"]}}
+
+                adp.post(
+                    session=adp_client,
+                    endpoint=WORKER_ENDPOINT,
+                    subresource="custom-field.string",
+                    verb="change",
+                    payload=wfm_change_payload,
+                )
     print("SUCCESS!")
 
 

@@ -23,7 +23,16 @@ def authorize(client_id, client_secret, cert_filepath, key_filepath):
     return session
 
 
-def get_paginated_data(session, endpoint, querystring={}):
+def get_record(session, endpoint, id, querystring={}):
+    url = f"{SERVICE_ROOT}{endpoint}/{id}"
+    r = session.get(url, params=querystring)
+    if r.status_code == 200:
+        return r.json()
+    else:
+        r.raise_for_status()
+
+
+def get_paginated_records(session, endpoint, querystring={}):
     url = f"{SERVICE_ROOT}{endpoint}"
     querystring["$skip"] = querystring.get("$skip", 0)
     all_data = []
@@ -40,8 +49,8 @@ def get_paginated_data(session, endpoint, querystring={}):
     return all_data
 
 
-def post(session, endpoint, path, payload, action):
-    url = f"{SERVICE_ROOT}{endpoint}.{path}.{action}"
+def post(session, endpoint, subresource, verb, payload):
+    url = f"{SERVICE_ROOT}{endpoint}.{subresource}.{verb}"
     try:
         r = session.post(url, json=payload)
         r.raise_for_status()
