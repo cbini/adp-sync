@@ -4,7 +4,6 @@ import os
 import pathlib
 import traceback
 
-import requests
 from dotenv import load_dotenv
 from google.cloud import storage
 
