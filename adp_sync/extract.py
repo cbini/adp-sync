@@ -4,47 +4,31 @@ import os
 import pathlib
 import traceback
 
-import requests
 from dotenv import load_dotenv
 from google.cloud import storage
-from oauthlib.oauth2 import BackendApplicationClient
-from requests_oauthlib import OAuth2Session
+
+import adp
 
 load_dotenv()
 
-CERT_FILENAME = os.getenv("CERT_FILENAME")
-KEY_FILENAME = os.getenv("KEY_FILENAME")
 CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
+CERT_FILEPATH = os.getenv("CERT_FILEPATH")
+KEY_FILEPATH = os.getenv("KEY_FILEPATH")
 GCS_BUCKET_NAME = os.getenv("GCS_BUCKET_NAME")
 
-SECURITY_TOKEN_SERVICE = "accounts.adp.com"
-SERVICE_ROOT = "api.adp.com"
 PROJECT_PATH = pathlib.Path(__file__).absolute().parent
-
-CERT_PATH = PROJECT_PATH / "certs" / CERT_FILENAME
-KEY_PATH = PROJECT_PATH / "certs" / KEY_FILENAME
-CERT_TUPLE = (CERT_PATH, KEY_PATH)
 
 
 def main():
-    ## instantiate ADP client
-    token_url = f"https://{SECURITY_TOKEN_SERVICE}/auth/oauth/v2/token"
-    auth = requests.auth.HTTPBasicAuth(CLIENT_ID, CLIENT_SECRET)
-    client = BackendApplicationClient(client_id=CLIENT_ID)
-    session = OAuth2Session(client=client)
-    session.cert = CERT_TUPLE
+    # instantiate ADP client
+    adp_client = adp.authorize(CLIENT_ID, CLIENT_SECRET, CERT_FILEPATH, KEY_FILEPATH)
 
-    ## authorize ADP client
-    token_dict = session.fetch_token(token_url=token_url, auth=auth)
-    access_token = token_dict.get("access_token")
-    session.headers["Authorization"] = f"Bearer {access_token}"
-
-    ## instantiate GCS clinet
+    # instantiate GCS client
     gcs_storage_client = storage.Client()
     gcs_bucket = gcs_storage_client.bucket(GCS_BUCKET_NAME)
 
-    ## define endpoint variables
+    # define endpoint variables
     endpoint = "/hr/v2/workers"
     table_name = endpoint.replace("/", "_")
     print(f"{endpoint}")
@@ -55,13 +39,13 @@ def main():
         data_path.mkdir(parents=True)
         print(f"\tCreated {'/'.join(data_path.parts[-3:])}...")
 
-    url = f"https://{SERVICE_ROOT}{endpoint}"
     querystring = {
         "$select": ",".join(
             [
                 "worker/associateOID",
                 "worker/person/preferredName",
                 "worker/person/legalName",
+                "worker/person/customFieldGroup",
                 "worker/businessCommunication/emails",
                 "worker/customFieldGroup",
                 "worker/workerDates",
@@ -70,23 +54,14 @@ def main():
         "$skip": 0,
     }
 
-    ## pull all data from endpoint
-    all_data = []
-    while True:
-        r = session.get(url, params=querystring)
-        if r.status_code == 204:
-            break
-        else:
-            data = r.json()
-            all_data.extend(data.get("workers"))
-            querystring["$skip"] += 50
+    all_data = adp.get_all_records(adp_client, endpoint, querystring)
 
-    ## save to json.gz
+    # save to json.gz
     with gzip.open(data_file, "wt", encoding="utf-8") as f:
         json.dump(all_data, f)
     print(f"\tSaved to {'/'.join(data_file.parts[-4:])}!")
 
-    ## upload to GCS
+    # upload to GCS
     destination_blob_name = "adp/" + "/".join(data_file.parts[-2:])
     blob = gcs_bucket.blob(destination_blob_name)
     blob.upload_from_filename(data_file)
