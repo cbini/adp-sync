@@ -62,7 +62,7 @@ def post(session, endpoint, subresource, verb, payload):
         r = session.post(url, json=payload)
         r.raise_for_status()
     except requests.exceptions.HTTPError:
-        if r.status_code == 404:
+        if r.status_code in [403, 404]:
             response = r.json().get("response")
             application_code = response.get("applicationCode")
             print(
@@ -78,7 +78,6 @@ def post(session, endpoint, subresource, verb, payload):
             formatted_message = f"\t{url}\n\t{payload}\n\n"
             for m in process_messages:
                 m.get("processMessages")
-                print(f"message: {m}")
                 formatted_message += (
                     f"\t{r.status_code} - {r.reason}: "
                     f"{m.get('userMessage').get('messageTxt')}"

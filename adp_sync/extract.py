@@ -54,7 +54,7 @@ def main():
         "$skip": 0,
     }
 
-    all_data = adp.get_paginated_records(adp_client, endpoint, querystring)
+    all_data = adp.get_all_records(adp_client, endpoint, querystring)
 
     # save to json.gz
     with gzip.open(data_file, "wt", encoding="utf-8") as f:

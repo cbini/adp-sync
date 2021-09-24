@@ -101,12 +101,20 @@ def main():
         )
 
         if record_match:
+            """
             base_event_data = {
                 "data": {
-                    "eventContext": {"worker": {"associateOID": i["associate_oid"]}},
-                    "transform": {"worker": {}},
+                    "eventContext": {
+                        "worker": {
+                            "associateOID": i["associate_oid"],
+                        }
+                    },
+                    "transform": {
+                        "worker": {},
+                    },
                 }
             }
+            """
 
             # update work email if new
             if i["mail"] != record_match["work_email"]:
@@ -115,9 +123,19 @@ def main():
                     f"\t{record_match['work_email']} => {i['mail']}"
                 )
 
-                work_email = copy.deepcopy(base_event_data)
-                work_email_data = work_email["data"]["transform"]["worker"] = {
-                    "businessCommunication": {"email": {"emailUri": i["mail"]}}
+                work_email_data = {
+                    "data": {
+                        "eventContext": {
+                            "worker": {"associateOID": i["associate_oid"]}
+                        },
+                        "transform": {
+                            "worker": {
+                                "businessCommunication": {
+                                    "email": {"emailUri": i["mail"]}
+                                }
+                            }
+                        },
+                    }
                 }
                 work_email_payload = {"events": [work_email_data]}
 
@@ -137,17 +155,24 @@ def main():
                     f" => {i['employee_number']}"
                 )
 
-                emp_num = copy.deepcopy(base_event_data)
-                emp_num_data = emp_num["data"]["eventContext"][
-                    "worker"
-                ]["customFieldGroup"] = {
-                    "stringField": {
-                        "itemID": f"{record_match.get('employee_number').get('itemID')}"
+                # emp_num = copy.deepcopy(base_event_data)
+                emp_num_data = {
+                    "data": {
+                        "eventContext": {
+                            "worker": {"associateOID": i["associate_oid"]}
+                        },
+                        "transform": {
+                            "worker": {
+                                "customFieldGroup": {
+                                    "stringField": {
+                                        "itemID": f"{record_match.get('employee_number').get('itemID')}",
+                                        "stringValue": i["employee_number"],
+                                    }
+                                }
+                            }
+                        },
                     }
                 }
-                emp_num_data = emp_num["data"]["transform"]["worker"][
-                    "customFieldGroup"
-                ] = {"stringField": {"stringValue": i["employee_number"]}}
                 emp_num_payload = {"events": [emp_num_data]}
 
                 adp.post(
@@ -166,17 +191,28 @@ def main():
                     f" => {i['wfm_trigger']}"
                 )
 
-                wfm_payload = copy.deepcopy(base_payload)
-                wfm_payload["events"][0]["data"]["eventContext"]["worker"][
-                    "customFieldGroup"
-                ] = {
-                    "stringField": {
-                        "itemID": f"{record_match.get('wfm_trigger').get('itemID')}"
+                wfm_data = {
+                    "data": {
+                        "eventContext": {
+                            "worker": {
+                                "associateOID": i["associate_oid"],
+                                "customFieldGroup": {
+                                    "stringField": {
+                                        "itemID": f"{record_match.get('wfm_trigger').get('itemID')}"
+                                    }
+                                },
+                            },
+                        },
+                        "transform": {
+                            "worker": {
+                                "customFieldGroup": {
+                                    "stringField": {"stringValue": i["wfm_trigger"]}
+                                }
+                            }
+                        },
                     }
                 }
-                wfm_payload["events"][0]["data"]["transform"]["worker"][
-                    "customFieldGroup"
-                ] = {"stringField": {"stringValue": i["wfm_trigger"]}}
+                wfm_payload = {"events": [wfm_data]}
 
                 adp.post(
                     session=adp_client,
@@ -186,44 +222,57 @@ def main():
                     payload=wfm_payload,
                 )
 
+            """
+            multi-code fields undocumented by API, and 403 for us
             # update pref race/eth if not matching
-            i["pref_race_eth"].sort()
-            rm_race_values = [
-                c.get("codeValue")
-                for c in record_match.get("pref_race_eth").get("codes")
-            ]
-            rm_race_values.sort()
-            if i["pref_race_eth"] != rm_race_values:
-                print(
-                    f"{i['employee_number']}"
-                    f"\t{rm_race_values}"
-                    f" => {i['pref_race_eth']}"
-                )
+            i_prefrace = sorted(i["pref_race_eth"], key=lambda d: d["codeValue"])
+            rm_prefrace = sorted(
+                [
+                    {"codeValue": c.get("codeValue")}
+                    for c in record_match.get("pref_race_eth").get("codes")
+                ],
+                key=lambda d: d["codeValue"],
+            )
+            if i_prefrace != rm_prefrace:
+                print(f"{i['employee_number']}" f"\t{rm_prefrace}" f" => {i_prefrace}")
 
-                race_payload = copy.deepcopy(base_payload)
-                race_payload["events"][0]["data"]["eventContext"]["worker"][
-                    "person"
-                ] = {
-                    "customFieldGroup": {
-                        "codeField": {
-                            "itemID": f"{record_match.get('pref_race_eth').get('itemID')}"
-                        }
+                race_data = {
+                    "data": {
+                        "eventContext": {
+                            "worker": {
+                                "associateOID": i["associate_oid"],
+                                "person": {
+                                    "customFieldGroup": {
+                                        "multiCodeField": {
+                                            "itemID": f"{record_match.get('pref_race_eth').get('itemID')}",
+                                        }
+                                    },
+                                },
+                            },
+                        },
+                        "transform": {
+                            "worker": {
+                                "person": {
+                                    "customFieldGroup": {
+                                        "multiCodeField": {
+                                            "codes": [i_prefrace[0]],
+                                        }
+                                    }
+                                }
+                            }
+                        },
                     }
                 }
-                race_payload["events"][0]["data"]["transform"]["worker"]["person"] = {
-                    "customFieldGroup": {"codeField": {"codeValue": i["pref_race_eth"]}}
-                    # TODO: try single value, if that works, try sending multiple events at once
-                }
+                race_payload = {"events": [race_data]}
 
                 adp.post(
                     session=adp_client,
                     endpoint=WORKER_ENDPOINT,
-                    subresource="person.custom-field.code",
+                    subresource="person.custom-field.multi-code",
                     verb="change",
                     payload=race_payload,
                 )
-
-                print()
+                """
     print("SUCCESS!")
 
 
