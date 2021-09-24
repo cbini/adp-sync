@@ -88,19 +88,6 @@ def main():
 
     print("Processing ADP updates...")
     for i in import_data:
-        base_payload = {
-            "events": [
-                {
-                    "data": {
-                        "eventContext": {
-                            "worker": {"associateOID": i["associate_oid"]}
-                        },
-                        "transform": {"worker": {}},
-                    }
-                }
-            ]
-        }
-
         # match db record to ADP record
         record_match = next(
             iter(
@@ -114,6 +101,13 @@ def main():
         )
 
         if record_match:
+            base_event_data = {
+                "data": {
+                    "eventContext": {"worker": {"associateOID": i["associate_oid"]}},
+                    "transform": {"worker": {}},
+                }
+            }
+
             # update work email if new
             if i["mail"] != record_match["work_email"]:
                 print(
@@ -121,10 +115,11 @@ def main():
                     f"\t{record_match['work_email']} => {i['mail']}"
                 )
 
-                work_email_payload = copy.deepcopy(base_payload)
-                work_email_payload["events"][0]["data"]["transform"]["worker"] = {
+                work_email = copy.deepcopy(base_event_data)
+                work_email_data = work_email["data"]["transform"]["worker"] = {
                     "businessCommunication": {"email": {"emailUri": i["mail"]}}
                 }
+                work_email_payload = {"events": [work_email_data]}
 
                 adp.post(
                     session=adp_client,
@@ -142,24 +137,25 @@ def main():
                     f" => {i['employee_number']}"
                 )
 
-                en_payload = copy.deepcopy(base_payload)
-                en_payload["events"][0]["data"]["eventContext"]["worker"][
-                    "customFieldGroup"
-                ] = {
+                emp_num = copy.deepcopy(base_event_data)
+                emp_num_data = emp_num["data"]["eventContext"][
+                    "worker"
+                ]["customFieldGroup"] = {
                     "stringField": {
                         "itemID": f"{record_match.get('employee_number').get('itemID')}"
                     }
                 }
-                en_payload["events"][0]["data"]["transform"]["worker"][
+                emp_num_data = emp_num["data"]["transform"]["worker"][
                     "customFieldGroup"
                 ] = {"stringField": {"stringValue": i["employee_number"]}}
+                emp_num_payload = {"events": [emp_num_data]}
 
                 adp.post(
                     session=adp_client,
                     endpoint=WORKER_ENDPOINT,
                     subresource="custom-field.string",
                     verb="change",
-                    payload=en_payload,
+                    payload=emp_num_payload,
                 )
 
             # update wfn trigger if not null
@@ -216,6 +212,7 @@ def main():
                 }
                 race_payload["events"][0]["data"]["transform"]["worker"]["person"] = {
                     "customFieldGroup": {"codeField": {"codeValue": i["pref_race_eth"]}}
+                    # TODO: try single value, if that works, try sending multiple events at once
                 }
 
                 adp.post(
