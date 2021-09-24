@@ -23,29 +23,36 @@ def authorize(client_id, client_secret, cert_filepath, key_filepath):
     return session
 
 
-def get_record(session, endpoint, id, querystring={}):
-    url = f"{SERVICE_ROOT}{endpoint}/{id}"
+def get_record(session, endpoint, querystring={}, id=None):
+    url = f"{SERVICE_ROOT}{endpoint}"
+    if id:
+        url = f"{url}/{id}"
+
     r = session.get(url, params=querystring)
+
+    if r.status_code == 204:
+        return None
+
     if r.status_code == 200:
-        return r.json()
+        data = r.json()
+        return data.get(endpoint.split("/")[-1])
     else:
         r.raise_for_status()
 
 
-def get_paginated_records(session, endpoint, querystring={}):
-    url = f"{SERVICE_ROOT}{endpoint}"
+def get_all_records(session, endpoint, querystring={}):
     querystring["$skip"] = querystring.get("$skip", 0)
     all_data = []
+
     while True:
-        r = session.get(url, params=querystring)
-        if r.status_code == 204:
+        data = get_record(session, endpoint, querystring)
+
+        if data is None:
             break
-        if r.status_code == 200:
-            data = r.json()
-            all_data.extend(data.get(endpoint.split("/")[-1]))
-            querystring["$skip"] += 50
         else:
-            r.raise_for_status()
+            all_data.extend(data)
+            querystring["$skip"] += 50
+
     return all_data
 
 
@@ -55,16 +62,28 @@ def post(session, endpoint, subresource, verb, payload):
         r = session.post(url, json=payload)
         r.raise_for_status()
     except requests.exceptions.HTTPError:
-        resource_messages = r.json().get("confirmMessage").get("resourceMessages")
-        process_messages = [m.get("processMessages") for m in resource_messages]
-        formatted_message = f"\t{url}\n\t{payload}\n\n"
-        for m in process_messages:
-            print(f"message: {m}")
-            formatted_message += (
-                f"\t{r.status_code} - {r.reason}: "
-                f"{m.get('userMessage').get('messageTxt')}"
+        if r.status_code == 404:
+            response = r.json().get("response")
+            application_code = response.get("applicationCode")
+            print(
+                f"\t{application_code.get('code')}: "
+                f"{application_code.get('message')}\n"
+                f"\t{response.get('resourceUri').get('href')}"
             )
-        print(formatted_message)
+        else:
+            resource_messages = r.json().get("confirmMessage").get("resourceMessages")
+            process_messages = next(
+                iter([m.get("processMessages") for m in resource_messages]), []
+            )
+            formatted_message = f"\t{url}\n\t{payload}\n\n"
+            for m in process_messages:
+                m.get("processMessages")
+                print(f"message: {m}")
+                formatted_message += (
+                    f"\t{r.status_code} - {r.reason}: "
+                    f"{m.get('userMessage').get('messageTxt')}"
+                )
+            print(formatted_message)
     except Exception as xc:
         print(xc)
         print(traceback.format_exc())

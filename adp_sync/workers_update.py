@@ -1,3 +1,4 @@
+import copy
 import gzip
 import json
 import os
@@ -120,7 +121,7 @@ def main():
                     f"\t{record_match['work_email']} => {i['mail']}"
                 )
 
-                work_email_payload = base_payload.copy()
+                work_email_payload = copy.deepcopy(base_payload)
                 work_email_payload["events"][0]["data"]["transform"]["worker"] = {
                     "businessCommunication": {"email": {"emailUri": i["mail"]}}
                 }
@@ -141,7 +142,7 @@ def main():
                     f" => {i['employee_number']}"
                 )
 
-                en_payload = base_payload.copy()
+                en_payload = copy.deepcopy(base_payload)
                 en_payload["events"][0]["data"]["eventContext"]["worker"][
                     "customFieldGroup"
                 ] = {
@@ -169,15 +170,15 @@ def main():
                     f" => {i['wfm_trigger']}"
                 )
 
-                wfm_change_payload = base_payload.copy()
-                wfm_change_payload["events"][0]["data"]["eventContext"]["worker"][
+                wfm_payload = copy.deepcopy(base_payload)
+                wfm_payload["events"][0]["data"]["eventContext"]["worker"][
                     "customFieldGroup"
                 ] = {
                     "stringField": {
                         "itemID": f"{record_match.get('wfm_trigger').get('itemID')}"
                     }
                 }
-                wfm_change_payload["events"][0]["data"]["transform"]["worker"][
+                wfm_payload["events"][0]["data"]["transform"]["worker"][
                     "customFieldGroup"
                 ] = {"stringField": {"stringValue": i["wfm_trigger"]}}
 
@@ -186,8 +187,46 @@ def main():
                     endpoint=WORKER_ENDPOINT,
                     subresource="custom-field.string",
                     verb="change",
-                    payload=wfm_change_payload,
+                    payload=wfm_payload,
                 )
+
+            # update pref race/eth if not matching
+            i["pref_race_eth"].sort()
+            rm_race_values = [
+                c.get("codeValue")
+                for c in record_match.get("pref_race_eth").get("codes")
+            ]
+            rm_race_values.sort()
+            if i["pref_race_eth"] != rm_race_values:
+                print(
+                    f"{i['employee_number']}"
+                    f"\t{rm_race_values}"
+                    f" => {i['pref_race_eth']}"
+                )
+
+                race_payload = copy.deepcopy(base_payload)
+                race_payload["events"][0]["data"]["eventContext"]["worker"][
+                    "person"
+                ] = {
+                    "customFieldGroup": {
+                        "codeField": {
+                            "itemID": f"{record_match.get('pref_race_eth').get('itemID')}"
+                        }
+                    }
+                }
+                race_payload["events"][0]["data"]["transform"]["worker"]["person"] = {
+                    "customFieldGroup": {"codeField": {"codeValue": i["pref_race_eth"]}}
+                }
+
+                adp.post(
+                    session=adp_client,
+                    endpoint=WORKER_ENDPOINT,
+                    subresource="person.custom-field.code",
+                    verb="change",
+                    payload=race_payload,
+                )
+
+                print()
     print("SUCCESS!")
 
 
