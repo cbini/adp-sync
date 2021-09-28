@@ -143,7 +143,6 @@ def main():
                     f" => {i['employee_number']}"
                 )
 
-                # emp_num = copy.deepcopy(base_event_data)
                 emp_num_data = {
                     "data": {
                         "eventContext": {
