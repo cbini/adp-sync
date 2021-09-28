@@ -1,5 +1,3 @@
-import traceback
-
 import requests
 from oauthlib.oauth2 import BackendApplicationClient
 from requests_oauthlib import OAuth2Session
@@ -65,7 +63,7 @@ def post(session, endpoint, subresource, verb, payload):
         if r.status_code in [403, 404]:
             response = r.json().get("response")
             application_code = response.get("applicationCode")
-            print(
+            raise requests.exceptions.HTTPError(
                 f"\t{application_code.get('code')}: "
                 f"{application_code.get('message')}\n"
                 f"\t{response.get('resourceUri').get('href')}"
@@ -82,7 +80,6 @@ def post(session, endpoint, subresource, verb, payload):
                     f"\t{r.status_code} - {r.reason}: "
                     f"{m.get('userMessage').get('messageTxt')}"
                 )
-            print(formatted_message)
+            raise requests.exceptions.HTTPError(formatted_message)
     except Exception as xc:
-        print(xc)
-        print(traceback.format_exc())
+        raise xc

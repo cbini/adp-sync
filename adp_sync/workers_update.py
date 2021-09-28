@@ -1,4 +1,3 @@
-import copy
 import gzip
 import json
 import os
@@ -101,21 +100,6 @@ def main():
         )
 
         if record_match:
-            """
-            base_event_data = {
-                "data": {
-                    "eventContext": {
-                        "worker": {
-                            "associateOID": i["associate_oid"],
-                        }
-                    },
-                    "transform": {
-                        "worker": {},
-                    },
-                }
-            }
-            """
-
             # update work email if new
             if i["mail"] != record_match["work_email"]:
                 print(
@@ -139,13 +123,17 @@ def main():
                 }
                 work_email_payload = {"events": [work_email_data]}
 
-                adp.post(
-                    session=adp_client,
-                    endpoint=WORKER_ENDPOINT,
-                    subresource="business-communication.email",
-                    verb="change",
-                    payload=work_email_payload,
-                )
+                try:
+                    adp.post(
+                        session=adp_client,
+                        endpoint=WORKER_ENDPOINT,
+                        subresource="business-communication.email",
+                        verb="change",
+                        payload=work_email_payload,
+                    )
+                except Exception as xc:
+                    print(xc)
+                    print(traceback.format_exc())
 
             # update employee number if missing
             if not record_match.get("employee_number").get("stringValue"):
@@ -181,13 +169,17 @@ def main():
                 }
                 emp_num_payload = {"events": [emp_num_data]}
 
-                adp.post(
-                    session=adp_client,
-                    endpoint=WORKER_ENDPOINT,
-                    subresource="custom-field.string",
-                    verb="change",
-                    payload=emp_num_payload,
-                )
+                try:
+                    adp.post(
+                        session=adp_client,
+                        endpoint=WORKER_ENDPOINT,
+                        subresource="custom-field.string",
+                        verb="change",
+                        payload=emp_num_payload,
+                    )
+                except Exception as xc:
+                    print(xc)
+                    print(traceback.format_exc())
 
             # update wfn trigger if not null
             if i["wfm_trigger"]:
@@ -220,13 +212,17 @@ def main():
                 }
                 wfm_payload = {"events": [wfm_data]}
 
-                adp.post(
-                    session=adp_client,
-                    endpoint=WORKER_ENDPOINT,
-                    subresource="custom-field.string",
-                    verb="change",
-                    payload=wfm_payload,
-                )
+                try:
+                    adp.post(
+                        session=adp_client,
+                        endpoint=WORKER_ENDPOINT,
+                        subresource="custom-field.string",
+                        verb="change",
+                        payload=wfm_payload,
+                    )
+                except Exception as xc:
+                    print(xc)
+                    print(traceback.format_exc())
 
             """
             multi-code fields undocumented by API, and 403 for us
