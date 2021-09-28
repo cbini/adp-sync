@@ -159,13 +159,19 @@ def main():
                 emp_num_data = {
                     "data": {
                         "eventContext": {
-                            "worker": {"associateOID": i["associate_oid"]}
+                            "worker": {
+                                "associateOID": i["associate_oid"],
+                                "customFieldGroup": {
+                                    "stringField": {
+                                        "itemID": f"{record_match.get('employee_number').get('itemID')}"
+                                    }
+                                },
+                            },
                         },
                         "transform": {
                             "worker": {
                                 "customFieldGroup": {
                                     "stringField": {
-                                        "itemID": f"{record_match.get('employee_number').get('itemID')}",
                                         "stringValue": i["employee_number"],
                                     }
                                 }
