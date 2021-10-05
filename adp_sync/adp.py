@@ -21,7 +21,7 @@ def authorize(client_id, client_secret, cert_filepath, key_filepath):
     return session
 
 
-def get_record(session, endpoint, querystring={}, id=None):
+def get_record(session, endpoint, querystring={}, id=None, object_name=None):
     url = f"{SERVICE_ROOT}{endpoint}"
     if id:
         url = f"{url}/{id}"
@@ -33,17 +33,18 @@ def get_record(session, endpoint, querystring={}, id=None):
 
     if r.status_code == 200:
         data = r.json()
-        return data.get(endpoint.split("/")[-1])
+        object_name = object_name or endpoint.split("/")[-1]
+        return data.get(object_name)
     else:
         r.raise_for_status()
 
 
-def get_all_records(session, endpoint, querystring={}):
+def get_all_records(session, endpoint, querystring={}, object_name=None):
     querystring["$skip"] = querystring.get("$skip", 0)
     all_data = []
 
     while True:
-        data = get_record(session, endpoint, querystring)
+        data = get_record(session, endpoint, querystring, object_name=object_name)
 
         if data is None:
             break
