@@ -64,6 +64,16 @@ def main():
             ),
             None,
         )
+        w_clean["wfm_badge_number"] = next(
+            iter(
+                [
+                    f
+                    for f in w["customFieldGroup"].get("stringFields", {})
+                    if f["nameCode"]["codeValue"] == "WFMgr Badge Number"
+                ]
+            ),
+            None,
+        )
         w_clean["wfm_trigger"] = next(
             iter(
                 [
@@ -191,6 +201,51 @@ def main():
                         f"{i['employee_number']}\n\n{xc}\n\n{traceback.format_exc()}"
                     )
                     email.send_email(subject=email_subject, body=email_body)
+
+            # update wfn badge number if missing
+            if not record_match.get("wfm_badge_number").get("stringValue"):
+                print(
+                    f"{i['employee_number']}"
+                    f"\t{record_match.get('wfm_badge_number').get('stringValue')}"
+                    f" => {i['employee_number']}"
+                )
+
+                emp_num_data = {
+                    "data": {
+                        "eventContext": {
+                            "worker": {
+                                "associateOID": i["associate_oid"],
+                                "customFieldGroup": {
+                                    "stringField": {
+                                        "itemID": f"{record_match.get('wfm_badge_number').get('itemID')}"
+                                    }
+                                },
+                            },
+                        },
+                        "transform": {
+                            "worker": {
+                                "customFieldGroup": {
+                                    "stringField": {
+                                        "stringValue": i["employee_number"],
+                                    }
+                                }
+                            }
+                        },
+                    }
+                }
+                emp_num_payload = {"events": [emp_num_data]}
+
+                try:
+                    adp.post(
+                        session=adp_client,
+                        endpoint=WORKER_ENDPOINT,
+                        subresource="custom-field.string",
+                        verb="change",
+                        payload=emp_num_payload,
+                    )
+                except Exception as xc:
+                    print(xc)
+                    print(traceback.format_exc())
 
             # update wfn trigger if not null
             if i["wfm_trigger"]:
