@@ -133,5 +133,6 @@ data/
 dev/
 archive/
 certs/
+config/
 .bash_secrets
 *.sh
