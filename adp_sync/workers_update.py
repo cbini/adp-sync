@@ -153,15 +153,14 @@ def main():
                     f" => {i['employee_number']}"
                 )
 
+                emp_num_item_id = f"{record_match.get('employee_number').get('itemID')}"
                 emp_num_data = {
                     "data": {
                         "eventContext": {
                             "worker": {
                                 "associateOID": i["associate_oid"],
                                 "customFieldGroup": {
-                                    "stringField": {
-                                        "itemID": f"{record_match.get('employee_number').get('itemID')}"
-                                    }
+                                    "stringField": {"itemID": emp_num_item_id}
                                 },
                             },
                         },
@@ -190,7 +189,7 @@ def main():
                     print(xc)
                     print(traceback.format_exc())
 
-            # update wfn badge number if missing
+            # update wfm badge number if missing
             if not record_match.get("wfm_badge_number").get("stringValue"):
                 print(
                     f"{i['employee_number']}"
@@ -198,15 +197,16 @@ def main():
                     f" => {i['employee_number']}"
                 )
 
-                emp_num_data = {
+                wfm_badge_item_id = (
+                    f"{record_match.get('wfm_badge_number').get('itemID')}"
+                )
+                wfm_badge_data = {
                     "data": {
                         "eventContext": {
                             "worker": {
                                 "associateOID": i["associate_oid"],
                                 "customFieldGroup": {
-                                    "stringField": {
-                                        "itemID": f"{record_match.get('wfm_badge_number').get('itemID')}"
-                                    }
+                                    "stringField": {"itemID": wfm_badge_item_id}
                                 },
                             },
                         },
@@ -221,7 +221,7 @@ def main():
                         },
                     }
                 }
-                emp_num_payload = {"events": [emp_num_data]}
+                wfm_badge_payload = {"events": [wfm_badge_data]}
 
                 try:
                     adp.post(
@@ -229,13 +229,13 @@ def main():
                         endpoint=WORKER_ENDPOINT,
                         subresource="custom-field.string",
                         verb="change",
-                        payload=emp_num_payload,
+                        payload=wfm_badge_payload,
                     )
                 except Exception as xc:
                     print(xc)
                     print(traceback.format_exc())
 
-            # update wfn trigger if not null
+            # update wfm trigger if not null
             if i["wfm_trigger"]:
                 print(
                     f"{i['employee_number']}"
@@ -243,15 +243,14 @@ def main():
                     f" => {i['wfm_trigger']}"
                 )
 
-                wfm_data = {
+                wfm_trigger_item_id = f"{record_match.get('wfm_trigger').get('itemID')}"
+                wfm_trigger_data = {
                     "data": {
                         "eventContext": {
                             "worker": {
                                 "associateOID": i["associate_oid"],
                                 "customFieldGroup": {
-                                    "stringField": {
-                                        "itemID": f"{record_match.get('wfm_trigger').get('itemID')}"
-                                    }
+                                    "stringField": {"itemID": wfm_trigger_item_id}
                                 },
                             },
                         },
@@ -264,7 +263,7 @@ def main():
                         },
                     }
                 }
-                wfm_payload = {"events": [wfm_data]}
+                wfm_trigger_payload = {"events": [wfm_trigger_data]}
 
                 try:
                     adp.post(
@@ -272,14 +271,14 @@ def main():
                         endpoint=WORKER_ENDPOINT,
                         subresource="custom-field.string",
                         verb="change",
-                        payload=wfm_payload,
+                        payload=wfm_trigger_payload,
                     )
                 except Exception as xc:
                     print(xc)
                     print(traceback.format_exc())
 
             """
-            multi-code fields undocumented by API, and 403 for us
+            # multi-code fields undocumented by API, and 403 for us
             # update pref race/eth if not matching
             i_prefrace = sorted(i["pref_race_eth"], key=lambda d: d["codeValue"])
             rm_prefrace = sorted(
@@ -292,6 +291,7 @@ def main():
             if i_prefrace != rm_prefrace:
                 print(f"{i['employee_number']}" f"\t{rm_prefrace}" f" => {i_prefrace}")
 
+                race_item_id = f"{record_match.get('pref_race_eth').get('itemID')}",
                 race_data = {
                     "data": {
                         "eventContext": {
@@ -300,7 +300,7 @@ def main():
                                 "person": {
                                     "customFieldGroup": {
                                         "multiCodeField": {
-                                            "itemID": f"{record_match.get('pref_race_eth').get('itemID')}",
+                                            "itemID": race_item_id
                                         }
                                     },
                                 },
@@ -324,7 +324,7 @@ def main():
                 adp.post(
                     session=adp_client,
                     endpoint=WORKER_ENDPOINT,
-                    subresource="person.custom-field.multi-code",
+                    subresource="person.custom-field.code",
                     verb="change",
                     payload=race_payload,
                 )
