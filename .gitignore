@@ -136,3 +136,4 @@ certs/
 config/
 .bash_secrets
 *.sh
+.pdm.toml
