@@ -149,6 +149,7 @@ for rc in report_configs:
         {
             "id": execution_id,
             "name": target_report["name"],
+            "hyperfind": rc["hyperfind"],
             "symbolic_period": rc["symbolic_id"],
             "date_range": target_dates,
         }
@@ -161,7 +162,11 @@ while len(target_executions) > 0:
         execution = [rex for rex in report_executions if rex.get("id") == tex["id"]][0]
         execution_status = execution.get("status").get("qualifier")
 
-        print(f"{tex['name']} - {tex['symbolic_period']}:\t{execution_status}")
+        print(
+            f"{tex['name']} - "
+            f"{tex['hyperfind']} - "
+            f"{tex['symbolic_period']}:\t{execution_status}"
+        )
         if execution_status == "Completed":
             print(f"\tDownloading {tex['name']} - {tex['symbolic_period']}...")
             report_file = api_call(
@@ -174,7 +179,11 @@ while len(target_executions) > 0:
                 print(f"\tCreating {file_dir}...")
                 file_dir.mkdir(parents=True)
 
-            file_path = file_dir / f"{tex['name']}-{tex['date_range']['begin']}.csv"
+            file_path = file_dir / (
+                f"{tex['name']}-"
+                f"{tex['hyperfind'].replace(' ', '')}-"
+                f"{tex['date_range']['begin']}.csv"
+            )
             print(f"\tSaving to {file_path}...")
             with file_path.open("w+") as f:
                 f.write(report_file.text)
