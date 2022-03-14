@@ -7,7 +7,7 @@ SERVICE_ROOT = "https://api.adp.com"
 
 def authorize(client_id, client_secret, cert_filepath, key_filepath):
     # instantiate ADP client
-    token_url = f"https://accounts.adp.com/auth/oauth/v2/token"
+    token_url = "https://accounts.adp.com/auth/oauth/v2/token"
     auth = requests.auth.HTTPBasicAuth(client_id, client_secret)
     client = BackendApplicationClient(client_id=client_id)
     session = OAuth2Session(client=client)
