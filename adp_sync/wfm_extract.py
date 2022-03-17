@@ -4,10 +4,7 @@ import time
 
 import requests
 import yaml
-from dotenv import load_dotenv
 from google.cloud import storage
-
-load_dotenv()
 
 WFM_HOST_NAME = os.getenv("WFM_HOST_NAME")
 WFM_APP_KEY = os.getenv("WFM_APP_KEY")

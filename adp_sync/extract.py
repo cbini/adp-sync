@@ -4,12 +4,9 @@ import os
 import pathlib
 import traceback
 
-from dotenv import load_dotenv
 from google.cloud import storage
 
 import adp
-
-load_dotenv()
 
 CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
