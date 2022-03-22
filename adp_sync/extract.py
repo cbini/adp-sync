@@ -7,6 +7,7 @@ import traceback
 from google.cloud import storage
 
 import adp
+from datarobot.utilities import email
 
 CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
@@ -71,3 +72,6 @@ if __name__ == "__main__":
     except Exception as xc:
         print(xc)
         print(traceback.format_exc())
+        email_subject = "ADP Extract Error"
+        email_body = f"{xc}\n\n{traceback.format_exc()}"
+        email.send_email(subject=email_subject, body=email_body)
