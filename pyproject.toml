@@ -32,9 +32,10 @@ requires = ["pdm-pep517>=0.12.0"]
 build-backend = "pdm.pep517.api"
 
 [tool.pdm.scripts]
+_.env_file = ".env"
 extract-workers.cmd = "python adp_sync/extract.py"
-extract-workers.env_file = ".env"
+extract-workers.site_packages = true
 update-workers.cmd = "python adp_sync/workers_update.py"
-update-workers.env_file = ".env"
+update-workers.site_packages = true
 extract-wfm.cmd = "python adp_sync/wfm_extract.py"
-extract-wfm.env_file = ".env"
+extract-wfm.site_packages = true
