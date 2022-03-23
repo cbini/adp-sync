@@ -13,7 +13,6 @@ WFM_CLIENT_SECRET = os.getenv("WFM_CLIENT_SECRET")
 WFM_USERNAME = os.getenv("WFM_USERNAME")
 WFM_PASSWORD = os.getenv("WFM_PASSWORD")
 GCS_BUCKET_NAME = os.getenv("GCS_BUCKET_NAME")
-LOCAL_TZ = os.getenv("LOCAL_TZ")
 
 PROJECT_PATH = pathlib.Path(__file__).absolute().parent
 DATA_PATH = PROJECT_PATH / "data"

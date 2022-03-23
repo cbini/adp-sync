@@ -5,7 +5,6 @@ import pathlib
 import traceback
 
 import adp
-from datarobot.utilities import email
 
 CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
@@ -141,11 +140,6 @@ def main():
                 except Exception as xc:
                     print(xc)
                     print(traceback.format_exc())
-                    email_subject = f"ADP Worker Update Error - Email"
-                    email_body = (
-                        f"{i['employee_number']}\n\n{xc}\n\n{traceback.format_exc()}"
-                    )
-                    email.send_email(subject=email_subject, body=email_body)
 
             # update employee number if missing
             if not record_match.get("employee_number").get("stringValue"):
@@ -190,11 +184,6 @@ def main():
                 except Exception as xc:
                     print(xc)
                     print(traceback.format_exc())
-                    email_subject = f"ADP Worker Update Error - Emp Num"
-                    email_body = (
-                        f"{i['employee_number']}\n\n{xc}\n\n{traceback.format_exc()}"
-                    )
-                    email.send_email(subject=email_subject, body=email_body)
 
             # update wfm badge number if missing
             if not record_match.get("wfm_badge_number").get("stringValue"):
@@ -283,11 +272,6 @@ def main():
                 except Exception as xc:
                     print(xc)
                     print(traceback.format_exc())
-                    email_subject = f"ADP Worker Update Error - WFM Trigger"
-                    email_body = (
-                        f"{i['employee_number']}\n\n{xc}\n\n{traceback.format_exc()}"
-                    )
-                    email.send_email(subject=email_subject, body=email_body)
 
             """
             # multi-code fields undocumented by API, and 403 for us
@@ -350,6 +334,3 @@ if __name__ == "__main__":
     except Exception as xc:
         print(xc)
         print(traceback.format_exc())
-        email_subject = f"ADP Worker Update Error"
-        email_body = f"{xc}\n\n{traceback.format_exc()}"
-        email.send_email(subject=email_subject, body=email_body)
