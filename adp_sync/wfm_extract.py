@@ -86,111 +86,122 @@ def authenticate(client, payload):
     return client
 
 
-report_configs = yaml.safe_load(YAML_PATH.open("r")).get("reports")
+def main():
+    report_configs = yaml.safe_load(YAML_PATH.open("r")).get("reports")
 
-wfm = get_client(WFM_HOST_NAME, WFM_APP_KEY)
-login_payload = get_login_payload(
-    WFM_CLIENT_ID, WFM_CLIENT_SECRET, WFM_USERNAME, WFM_PASSWORD
-)
-
-wfm = authenticate(wfm, login_payload)
-wfm.refresh_payload = get_refresh_payload(
-    login_payload, wfm.access_token["refresh_token"]
-)
-
-gcs_storage_client = storage.Client()
-gcs_bucket = gcs_storage_client.bucket(GCS_BUCKET_NAME)
-
-reports = api_call(wfm, "GET", "/v1/platform/reports").json()
-symbolic_periods = api_call(wfm, "GET", "/v1/commons/symbolicperiod").json()
-hyperfind_queries = (
-    api_call(wfm, "GET", "/v1/commons/hyperfind").json().get("hyperfindQueries")
-)
-
-target_executions = []
-for rc in report_configs:
-    target_report = [r for r in reports if r["name"] == rc["name"]][0]
-    target_period = [
-        sp for sp in symbolic_periods if sp["symbolicId"] == rc["symbolic_id"]
-    ][0]
-    target_hyperfind = [
-        hq for hq in hyperfind_queries if hq["name"] == rc["hyperfind"]
-    ][0]
-
-    target_dates_payload = {
-        "where": {"currentUser": True, "symbolicPeriodId": rc["symbolic_id"]}
-    }
-    target_dates = api_call(
-        wfm, "POST", "/v1/commons/symbolicperiod/read", json=target_dates_payload
-    ).json()
-
-    execute_endpoint = f"/v1/platform/reports/{target_report['name']}/execute"
-    execute_payload = {
-        "parameters": [
-            {"name": "DateRange", "value": {"symbolicPeriod": target_period}},
-            {"name": "DataSource", "value": {"hyperfind": target_hyperfind}},
-            {
-                "name": "Output Format",
-                "value": {"key": "csv", "title": "CSV"},
-            },  # undocumented: where does this come from?
-        ]
-    }
-
-    execute_response = api_call(
-        wfm, "POST", execute_endpoint, json=execute_payload
-    ).json()
-
-    execution_id = execute_response.get("id")
-    target_executions.append(
-        {
-            "id": execution_id,
-            "name": target_report["name"],
-            "hyperfind": rc["hyperfind"],
-            "symbolic_period": rc["symbolic_id"],
-            "date_range": target_dates,
-        }
+    wfm = get_client(WFM_HOST_NAME, WFM_APP_KEY)
+    login_payload = get_login_payload(
+        WFM_CLIENT_ID, WFM_CLIENT_SECRET, WFM_USERNAME, WFM_PASSWORD
     )
 
-while len(target_executions) > 0:
-    report_executions = api_call(wfm, "GET", "/v1/platform/report_executions").json()
+    wfm = authenticate(wfm, login_payload)
+    wfm.refresh_payload = get_refresh_payload(
+        login_payload, wfm.access_token["refresh_token"]
+    )
 
-    for i, tex in enumerate(target_executions):
-        execution = [rex for rex in report_executions if rex.get("id") == tex["id"]][0]
-        execution_status = execution.get("status").get("qualifier")
+    gcs_storage_client = storage.Client()
+    gcs_bucket = gcs_storage_client.bucket(GCS_BUCKET_NAME)
 
-        print(
-            f"{tex['name']} - "
-            f"{tex['hyperfind']} - "
-            f"{tex['symbolic_period']}:\t{execution_status}"
+    reports = api_call(wfm, "GET", "/v1/platform/reports").json()
+    symbolic_periods = api_call(wfm, "GET", "/v1/commons/symbolicperiod").json()
+    hyperfind_queries = (
+        api_call(wfm, "GET", "/v1/commons/hyperfind").json().get("hyperfindQueries")
+    )
+
+    target_executions = []
+    for rc in report_configs:
+        target_report = [r for r in reports if r["name"] == rc["name"]][0]
+        target_period = [
+            sp for sp in symbolic_periods if sp["symbolicId"] == rc["symbolic_id"]
+        ][0]
+        target_hyperfind = [
+            hq for hq in hyperfind_queries if hq["name"] == rc["hyperfind"]
+        ][0]
+
+        target_dates_payload = {
+            "where": {"currentUser": True, "symbolicPeriodId": rc["symbolic_id"]}
+        }
+        target_dates = api_call(
+            wfm, "POST", "/v1/commons/symbolicperiod/read", json=target_dates_payload
+        ).json()
+
+        execute_endpoint = f"/v1/platform/reports/{target_report['name']}/execute"
+        execute_payload = {
+            "parameters": [
+                {"name": "DateRange", "value": {"symbolicPeriod": target_period}},
+                {"name": "DataSource", "value": {"hyperfind": target_hyperfind}},
+                {
+                    "name": "Output Format",
+                    "value": {"key": "csv", "title": "CSV"},
+                },  # undocumented: where does this come from?
+            ]
+        }
+
+        execute_response = api_call(
+            wfm, "POST", execute_endpoint, json=execute_payload
+        ).json()
+
+        execution_id = execute_response.get("id")
+        target_executions.append(
+            {
+                "id": execution_id,
+                "name": target_report["name"],
+                "hyperfind": rc["hyperfind"],
+                "symbolic_period": rc["symbolic_id"],
+                "date_range": target_dates,
+            }
         )
-        if execution_status == "Completed":
-            print(f"\tDownloading {tex['name']} - {tex['symbolic_period']}...")
-            report_file = api_call(
-                wfm, "GET", f"/v1/platform/report_executions/{tex['id']}/file"
+
+    while len(target_executions) > 0:
+        report_executions = api_call(
+            wfm, "GET", "/v1/platform/report_executions"
+        ).json()
+
+        for i, tex in enumerate(target_executions):
+            execution = [
+                rex for rex in report_executions if rex.get("id") == tex["id"]
+            ][0]
+            execution_status = execution.get("status").get("qualifier")
+
+            print(
+                f"{tex['name']} - "
+                f"{tex['hyperfind']} - "
+                f"{tex['symbolic_period']}:\t{execution_status}"
             )
+            if execution_status == "Completed":
+                print(f"\tDownloading {tex['name']} - {tex['symbolic_period']}...")
+                report_file = api_call(
+                    wfm, "GET", f"/v1/platform/report_executions/{tex['id']}/file"
+                )
 
-            # save as file
-            file_dir = DATA_PATH / tex["name"]
-            if not file_dir.exists():
-                print(f"\tCreating {file_dir}...")
-                file_dir.mkdir(parents=True)
+                # save as file
+                file_dir = DATA_PATH / tex["name"]
+                if not file_dir.exists():
+                    print(f"\tCreating {file_dir}...")
+                    file_dir.mkdir(parents=True)
 
-            file_path = file_dir / (
-                f"{tex['name']}-"
-                f"{tex['hyperfind'].replace(' ', '')}-"
-                f"{tex['date_range']['begin']}.csv"
-            )
-            print(f"\tSaving to {file_path}...")
-            with file_path.open("w+") as f:
-                f.write(report_file.text)
+                file_path = file_dir / (
+                    f"{tex['name']}-"
+                    f"{tex['hyperfind'].replace(' ', '')}-"
+                    f"{tex['date_range']['begin']}.csv"
+                )
+                print(f"\tSaving to {file_path}...")
+                with file_path.open("w+") as f:
+                    f.write(report_file.text)
 
-            # upload to GCS
-            fpp = file_path.parts
-            destination_blob_name = f"adp/" f"{'/'.join(fpp[fpp.index('data') + 1:])}"
-            blob = gcs_bucket.blob(destination_blob_name)
-            blob.upload_from_filename(file_path)
-            print(f"\tUploaded to {blob.public_url}!")
+                # upload to GCS
+                fpp = file_path.parts
+                destination_blob_name = (
+                    f"adp/" f"{'/'.join(fpp[fpp.index('data') + 1:])}"
+                )
+                blob = gcs_bucket.blob(destination_blob_name)
+                blob.upload_from_filename(file_path)
+                print(f"\tUploaded to {blob.public_url}!")
 
-            del target_executions[i]
+                del target_executions[i]
 
-    time.sleep(8)
+        time.sleep(8)
+
+
+if __name__ == "__main__":
+    main()
