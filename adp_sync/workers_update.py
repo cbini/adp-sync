@@ -43,7 +43,7 @@ def flatten_worker(worker):
         item_name="Work E-mail",
         object_name="businessCommunication",
         attr_name="emails",
-    )  # TODO: fix
+    )
 
     worker_flat["employee_number"] = get_worker_item(
         worker=worker, item_name="Employee Number"
@@ -128,7 +128,7 @@ def main():
 
                 work_email_data = get_event_payload(
                     associate_oid=i["associate_oid"],
-                    item_id=record_match.get("work_email").get("itemID"),
+                    item_id="Business",
                     string_value=i["mail"],
                 )
 
